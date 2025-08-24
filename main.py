@@ -3,9 +3,9 @@ import asyncio
 import datetime
 import requests
 import logging
-from datetime import datetime, timezone
 import os
 from discord.ext import commands
+from datetime import datetime, timezone, timedelta
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

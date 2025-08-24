@@ -381,6 +381,7 @@ async def on_message(message):
 
 # Chạy bot với xử lý lỗi
 if __name__ == "__main__":
+    logger.info("🚀 Bot đang khởi động trên Render...")
     try:
         client.run(TOKEN)
     except Exception as e:

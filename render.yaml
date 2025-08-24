@@ -1,0 +1,14 @@
+services:
+  - type: worker
+    name: xauusd-bot
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python test.py"   # hoặc main.py nếu bạn dùng main.py
+    autoDeploy: true
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CHANNEL_ID
+        value: "1406848822860320828"
+      - key: PYTHON_VERSION
+        value: "3.12"

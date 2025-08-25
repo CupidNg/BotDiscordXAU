@@ -193,7 +193,7 @@ class TrendTracker:
                         f"🤩 AN TOÀN! Giá XAU: {price:.0f} ,Giá Vàng giảm {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau đợt tăng: {old_total:.2f} USD"]
                 else:
                     messages = [
-                        f"🙏 CHƯA AN TOÀN! Giá Vàng giảm {pull_amt:.2f} USD, Pullback nhẹ {pull_pct:.2f}% sau đợt tăng: {self.total_trend:.2f} USD (ĐỢI PULLBACK THÊM!)"]
+                        f"🙏 CHƯA AN TOÀN! Giá XAU: {price:.0f} Giá Vàng giảm {pull_amt:.2f} USD, Pullback nhẹ {pull_pct:.2f}% sau đợt tăng: {self.total_trend:.2f} USD (ĐỢI PULLBACK THÊM!)"]
 
         elif self.trend == "down":
             if price < self.extreme_price:
@@ -220,7 +220,7 @@ class TrendTracker:
                         f" 🤩 AN TOÀN! Giá XAU: {price:.0f}, Giá Vàng tăng {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau đợt giảm: {old_total:.2f} USD"]
                 else:
                     messages = [
-                        f" 🙏 CHƯA AN TOÀN! Giá Vàng tăng {pull_amt:.2f} USD, Pullback nhẹ {pull_pct:.2f}% sau chuỗi giảm: {self.total_trend:.2f} USD (ĐỢI PULLBACK THÊM)"]
+                        f" 🙏 CHƯA AN TOÀN! Giá XAU: {price:.0f}, Giá Vàng tăng {pull_amt:.2f} USD, Pullback nhẹ {pull_pct:.2f}% sau chuỗi giảm: {self.total_trend:.2f} USD (ĐỢI PULLBACK THÊM)"]
 
         return "\n".join(messages)
 

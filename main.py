@@ -2,12 +2,11 @@ import discord
 import asyncio
 import datetime
 import requests
+import logging
 import os, threading
 from discord.ext import commands
 from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import MetaTrader5 as mt5
-import logging
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -241,10 +240,8 @@ class TrendTracker:
 # ==============================
 # Discord Bot - Improved
 # ==============================
-# TOKEN = os.getenv("DISCORD_TOKEN")  # Lấy token từ biến môi trường
-TOKEN = 'MTQwNjk2MTk3ODYwNTQ0MTIwNw.Gg1P2X.PRC6Hv0NYEYefosgtnDYSvxKMY_-Swp3DQyvPY'
+TOKEN = os.getenv("DISCORD_TOKEN")  # Lấy token từ biến môi trường
 CHANNEL_ID = 1406848822860320828  # thay bằng channel ID của bạn
-
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -253,40 +250,27 @@ client = discord.Client(intents=intents)
 tracker = None
 waiting_for_init = True
 
-if not mt5.initialize():
-    logger.error(f"❌ Kết nối MT5 thất bại: {mt5.last_error()}")
-    raise RuntimeError("Không thể kết nối tới MT5")
 
-symbol = "XAUUSDm"
-
-# async def get_gold_price():
-#     """Lấy giá vàng từ API - không fallback giá ngẫu nhiên"""
-#     try:
-#         # API thật - thay bằng provider giá vàng của bạn
-#         url = "https://api.metals.live/v1/spot/gold"
-#         response = requests.get(url, timeout=10)
-#         if response.status_code == 200:
-#             data = response.json()
-#             return data[0]["price"]  # Giá USD/oz
-#         else:
-#             raise Exception(f"API returned status {response.status_code}")
-#     except Exception as e:
-#         logger.error(f"❌ Không thể lấy giá vàng: {e}")
-#         raise Exception(f"Lỗi lấy giá: {str(e)}")
-
-def get_gold_price():
-    tick = mt5.symbol_info_tick(symbol)
-    if tick is None:
-        raise Exception("Không thể lấy dữ liệu từ MT5")
-    return tick.bid  # hoặc tick.ask/last
+async def get_gold_price():
+    """Lấy giá vàng từ API - không fallback giá ngẫu nhiên"""
+    try:
+        # API thật - thay bằng provider giá vàng của bạn
+        url = "https://api.metals.live/v1/spot/gold"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return data[0]["price"]  # Giá USD/oz
+        else:
+            raise Exception(f"API returned status {response.status_code}")
+    except Exception as e:
+        logger.error(f"❌ Không thể lấy giá vàng: {e}")
+        raise Exception(f"Lỗi lấy giá: {str(e)}")
 
 
-async def price_loop_simple(channel):
-    """Phiên bản đơn giản và ổn định nhất"""
+async def price_loop(channel):
+    """Vòng lặp chính - cải tiến xử lý lỗi"""
     global tracker
     await client.wait_until_ready()
-
-    processed_times = set()  # Lưu các thời điểm đã xử lý
 
     while not client.is_closed():
         try:
@@ -295,47 +279,46 @@ async def price_loop_simple(channel):
             hour = now.hour
             minute = now.minute
 
-            # Thị trường mở cửa
+            # Thị trường mở cửa (cải tiến logic)
             market_open = (
                     (weekday == 0 and hour >= 5) or  # Thứ 2 từ 5h
                     (0 < weekday < 5) or  # Thứ 3-6
                     (weekday == 5 and hour < 4)  # Thứ 7 đến 4h
             )
 
-            # Tạo key thời gian duy nhất cho mỗi slot 15 phút
-            time_slot = f"{now.date()}_{hour:02d}_{(minute // 15) * 15:02d}"
+            if market_open and tracker:
+                # Đợi đến phút chia hết cho 15
+                wait_minutes = (15 - (minute % 15)) % 15
+                if wait_minutes == 0:
+                    wait_minutes = 15
 
-            if (market_open and tracker and
-                    minute % 15 == 0 and  # Đúng phút tròn
-                    time_slot not in processed_times):  # Chưa xử lý
+                await asyncio.sleep(wait_minutes * 60)
 
+                # Lấy giá và cập nhật
                 try:
-                    price = get_gold_price()
+                    price = await get_gold_price()
                     msg = tracker.update(price)
 
-                    if 6 <= hour <= 23:
+                    # Chỉ gửi trong giờ hoạt động
+                    current_time = datetime.now(timezone.utc) + timedelta(hours=7)
+                    if 6 <= current_time.hour <= 23:  # Mở rộng giờ hoạt động
                         await channel.send(msg)
-                        logger.info(f"✅ Thông báo gửi lúc: {now.strftime('%d/%m/%Y %H:%M:%S')}")
                     else:
-                        logger.info(f"[{now.strftime('%H:%M')}] {msg}")
-
-                    processed_times.add(time_slot)
-
-                    # Dọn dẹp processed_times cũ (giữ lại 24h)
-                    if len(processed_times) > 100:
-                        processed_times.clear()
+                        logger.info(f"[{current_time.strftime('%H:%M')}] {msg}")
 
                 except Exception as price_error:
                     logger.error(f"Lỗi lấy giá vàng: {price_error}")
-                    if 6 <= hour <= 23:
-                        await channel.send(f"❌ Lỗi lấy giá: {price_error}")
-
-            # Luôn sleep 30 giây để kiểm tra thường xuyên
-            await asyncio.sleep(30)
+                    current_time = datetime.now(timezone.utc) + timedelta(hours=7)
+                    if 6 <= current_time.hour <= 23:
+                        await channel.send(f"❌ Không lấy được giá vàng: {price_error}. Đang thử lại...")
+                    # Đợi 2 phút rồi thử lại thay vì đợi 15 phút
+                    await asyncio.sleep(120)
+            else:
+                await asyncio.sleep(300)  # Kiểm tra lại sau 5 phút
 
         except Exception as e:
-            logger.error(f"Error in price_loop_simple: {e}")
-            await asyncio.sleep(60)
+            logger.error(f"Error in price_loop: {e}")
+            await asyncio.sleep(60)  # Đợi 1 phút rồi thử lại
 
 
 @client.event
@@ -353,7 +336,7 @@ async def on_ready():
         await channel.send(embed=embed)
 
         # Bắt đầu vòng lặp
-        client.loop.create_task(price_loop_simple(channel))
+        client.loop.create_task(price_loop(channel))
     else:
         logger.error(f"Cannot find channel with ID: {CHANNEL_ID}")
 

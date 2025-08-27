@@ -71,35 +71,51 @@ class TrendTracker:
         else:
             return f"🔴 {minutes}p: {delta:.1f}$"
 
+    def get_alert_message(self):
+        """Trả về thông báo báo động dựa trên total_trend"""
+        if self.total_trend >= 90:
+            return f"💀💀💀 Báo động cấp độ 3, Giá đi {self.total_trend}USD rồi"
+        elif self.total_trend >= 70:
+            return f"🚨🚨 Báo động cấp độ 2, Giá đi {self.total_trend}USD rồi"
+        elif self.total_trend >= 40:
+            return f"⚠️ Báo động cấp độ 1, Giá đi {self.total_trend}USD rồi"
+        else:
+            return None
+
     def update(self, price: float):
         messages = []
+
+        # Thêm thông báo báo động ở đầu
+        alert_message = self.get_alert_message()
+        if alert_message:
+            messages.append(alert_message)
 
         # Delta 15p
         delta = price - self.last_price
         # Logic delta với hỗ trợ sideway
         if abs(delta) < 1:
             if self.trend == "up":
-                messages.append(f"Giá Vàng ít biến động {delta:+.2f} USD, tổng tăng: {self.total_trend:.2f} USD")
+                messages.append(f"🥱 Giá ít biến động: {price} ({delta:+.2f}USD), tổng tăng: {self.total_trend:.2f} USD")
             elif self.trend == "down":
-                messages.append(f"Giá Vàng ít biến động {delta:+.2f} USD, tổng giảm: {self.total_trend:.2f} USD")
+                messages.append(f"🥱 Giá ít biến động: {price} ({delta:+.2f}USD), tổng giảm: {self.total_trend:.2f} USD")
             elif self.trend == "sideway":
-                messages.append(f"Giá Vàng ít biến động {delta:+.2f} USD")
+                messages.append(f"🥱 Giá ít biến động: {price} ({delta:+.2f}USD)")
             else:
-                messages.append(f"Giá Vàng ít biến động {delta:+.2f} USD")
+                messages.append(f"Giá ít biến động: {delta:+.2f} USD")
         elif delta > 0:
             if self.trend == "up":
-                messages.append(f"Giá Vàng tăng {delta:.2f} USD, tổng tăng: {self.total_trend:.2f} USD")
+                messages.append(f"Giá:{price} tăng {delta:.2f} USD, tổng tăng: {self.total_trend:.2f} USD")
             elif self.trend == "sideway":
-                messages.append(f"Giá Vàng tăng {delta:.2f} USD")
+                messages.append(f"Giá:{price} tăng {delta:.2f} USD")
             else:
-                messages.append(f"Giá Vàng tăng {delta:.2f} USD")
+                messages.append(f"Giá:{price} tăng {delta:.2f} USD")
         elif delta < 0:
             if self.trend == "down":
-                messages.append(f"Giá Vàng giảm {abs(delta):.2f} USD, tổng giảm: {self.total_trend:.2f} USD")
+                messages.append(f"Giá:{price} giảm {abs(delta):.2f} USD, tổng giảm: {self.total_trend:.2f} USD")
             elif self.trend == "sideway":
-                messages.append(f"Giá Vàng giảm {abs(delta):.2f} USD")
+                messages.append(f"Giá:{price} giảm {abs(delta):.2f} USD")
             else:
-                messages.append(f"Giá Vàng giảm {abs(delta):.2f} USD")
+                messages.append(f"Giá:{price} giảm {abs(delta):.2f} USD")
 
         self.last_price = price
 
@@ -122,15 +138,15 @@ class TrendTracker:
                     self.start_price = self.low
                     self.extreme_price = self.high
                     self.total_trend = self.high - self.low
-                    messages.append(f"Giá Vàng tăng vượt 10 USD ,tổng tăng: {self.total_trend:.2f} USD")
+                    messages.append(f"Giá tăng hơn 10 USD ,tổng tăng: {self.total_trend:.2f} USD")
                 elif price == self.low:
                     self.trend = "down"
                     self.start_price = self.high
                     self.extreme_price = self.low
                     self.total_trend = self.start_price - self.extreme_price
-                    messages.append(f"Giá Vàng giảm vượt 10 USD ,tổng giảm: {self.total_trend:.2f} USD")
+                    messages.append(f"Giá giảm hơn 10 USD ,tổng giảm: {self.total_trend:.2f} USD")
             else:
-                messages.append(f"Giá Vàng sideway, range tổng: {self.total_trend:.2f} USD")
+                messages.append(f"Giá sideway, range tổng: {self.total_trend:.2f} USD")
 
         elif self.trend is None and self.reset_price is not None:
             if self.pre_reset_trend == "up":
@@ -140,16 +156,16 @@ class TrendTracker:
                     self.extreme_price = price
                     self.total_trend = self.extreme_price - self.start_price
                     self.reset_price = None
-                    messages = [f"Giá Vàng phá đỉnh cũ, tổng tăng: {self.total_trend:.2f} USD"]
+                    messages = [f"🔼 Giá {price} phá đỉnh cũ, tổng tăng: {self.total_trend:.2f} USD"]
                 elif price < self.reset_price:
                     self.trend = "down"
                     self.start_price = self.extreme_price
                     self.extreme_price = price
                     self.total_trend = self.start_price - self.extreme_price
                     self.reset_price = None
-                    messages = [f"Giá Vàng tiếp tục giảm, tổng giảm: {self.total_trend:.2f} USD"]
+                    messages = [f"Giá {price} tiếp tục giảm, tổng giảm: {self.total_trend:.2f} USD"]
                 else:
-                    messages = [f"Giá Vàng ít biến động {delta:+.2f} USD, chưa xác định xu hướng mới"]
+                    messages = [f"Giá ít biến động {delta:+.2f} USD, chưa xác định xu hướng mới"]
 
             elif self.pre_reset_trend == "down":
                 if price < self.extreme_price:
@@ -158,22 +174,22 @@ class TrendTracker:
                     self.extreme_price = price
                     self.total_trend = self.start_price - self.extreme_price
                     self.reset_price = None
-                    messages = [f"Giá Vàng phá đáy cũ, tổng giảm: {self.total_trend:.2f} USD"]
+                    messages = [f"🔻 Giá phá đáy, tổng giảm: {self.total_trend:.2f} USD"]
                 elif price > self.reset_price:
                     self.trend = "up"
                     self.start_price = self.extreme_price
                     self.extreme_price = price
                     self.total_trend = self.extreme_price - self.start_price
                     self.reset_price = None
-                    messages = [f"Giá Vàng tiếp tục tăng, tổng tăng: {self.total_trend:.2f} USD"]
+                    messages = [f"Giá tiếp tục tăng, tổng tăng: {self.total_trend:.2f} USD"]
                 else:
-                    messages = [f"Giá Vàng ít biến động {delta:+.2f} USD, chưa xác định xu hướng mới"]
+                    messages = [f"Giá ít biến động {delta:+.2f} USD, chưa xác định xu hướng mới"]
 
         elif self.trend == "up":
             if price > self.extreme_price:
                 self.extreme_price = price
                 self.total_trend = self.extreme_price - self.start_price
-                messages = [f"Giá Vàng tạo đỉnh mới, tổng tăng: {self.total_trend:.2f} USD"]
+                messages = [f"📈 Giá tạo đỉnh mới ({price}), tổng tăng: {self.total_trend:.2f} USD"]
             else:
                 pull_amt = self.extreme_price - price
                 pull_pct = (pull_amt / (self.extreme_price - self.start_price)) * 100
@@ -183,7 +199,7 @@ class TrendTracker:
                     self.start_price = self.extreme_price
                     self.extreme_price = price
                     self.total_trend = self.start_price - self.extreme_price
-                    messages = [f"🤩 AN TOÀN! Giá Vàng đảo chiều, tổng giảm: {self.total_trend:.2f} USD"]
+                    messages = [f"🤩 AN TOÀN! Giá quay về đáy cũ, tổng giảm: {self.total_trend:.2f} USD"]
                 elif pull_pct >= 40:
                     self.pre_reset_trend = "up"
                     self.trend = None
@@ -191,16 +207,16 @@ class TrendTracker:
                     old_total = self.total_trend
                     self.total_trend = 0
                     messages = [
-                        f"🤩 AN TOÀN! Giá Vàng giảm {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi tăng: {old_total:.2f} USD"]
+                        f"🤩 AN TOÀN! Giá giảm {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi tăng: {old_total:.2f} USD"]
                 else:
                     messages = [
-                        f"Giá Vàng giảm {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi tăng: {self.total_trend:.2f} USD"]
+                        f"🥱 Giá giảm {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi tăng: {self.total_trend:.2f} USD"]
 
         elif self.trend == "down":
             if price < self.extreme_price:
                 self.extreme_price = price
                 self.total_trend = self.start_price - self.extreme_price
-                messages = [f"Giá Vàng tạo đáy mới, tổng giảm: {self.total_trend:.2f} USD"]
+                messages = [f"Giá tạo đáy mới ({price}), tổng giảm: {self.total_trend:.2f} USD"]
             else:
                 pull_amt = price - self.extreme_price
                 pull_pct = (pull_amt / (self.start_price - self.extreme_price)) * 100
@@ -210,7 +226,7 @@ class TrendTracker:
                     self.start_price = self.extreme_price
                     self.extreme_price = price
                     self.total_trend = self.extreme_price - self.start_price
-                    messages = [f"🤩 AN TOÀN! Giá Vàng đảo chiều, tổng tăng: {self.total_trend:.2f} USD"]
+                    messages = [f"🤩 AN TOÀN! Giá quay về đỉnh cũ, tổng tăng: {self.total_trend:.2f} USD"]
                 elif pull_pct >= 40:
                     self.pre_reset_trend = "down"
                     self.trend = None
@@ -218,10 +234,10 @@ class TrendTracker:
                     old_total = self.total_trend
                     self.total_trend = 0
                     messages = [
-                        f" 🤩 AN TOÀN! Giá Vàng tăng {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi giảm: {old_total:.2f} USD"]
+                        f" 🤩 AN TOÀN! Giá tăng {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi giảm: {old_total:.2f} USD"]
                 else:
                     messages = [
-                        f"Giá Vàng tăng {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi giảm: {self.total_trend:.2f} USD"]
+                        f"🥱 Giá tăng {pull_amt:.2f} USD, Pullback {pull_pct:.2f}% sau chuỗi giảm: {self.total_trend:.2f} USD"]
 
         return "\n".join(messages)
 

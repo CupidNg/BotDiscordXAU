@@ -242,7 +242,7 @@ class TrendTracker:
 # Discord Bot - Improved
 # ==============================
 # TOKEN = os.getenv("DISCORD_TOKEN")  # Lấy token từ biến môi trường
-# TOKEN = 'MTQwNjk2MTk3ODYwNTQ0MTIwNw.Gg1P2X.PRC6Hv0NYEYefosgtnDYSvxKMY_-Swp3DQyvPY'
+
 CHANNEL_ID = 1406848822860320828  # thay bằng channel ID của bạn
 
 
